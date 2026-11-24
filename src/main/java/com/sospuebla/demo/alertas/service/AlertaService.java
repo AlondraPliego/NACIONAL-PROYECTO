@@ -63,10 +63,11 @@ public class AlertaService {
     private AlertaDetalle detalle(Alerta a) {
         var voluntarios = alertaVoluntarioRepo.findByAlertaId(a.getId()).stream()
                 .map(av -> {
-                    String nombre = voluntarioRepo.findById(av.getVoluntarioId())
-                            .map(Voluntario::getNombre)
-                            .orElse("Desconocido");
-                    return new VoluntarioNotificado(av.getVoluntarioId(), nombre, av.getDistanciaKm(), av.getEstado().name());
+                    Voluntario v = voluntarioRepo.findById(av.getVoluntarioId()).orElse(null);
+                    String nombre = v == null ? "Desconocido" : v.getNombre();
+                    Double lat = v == null ? null : v.getLat();
+                    Double lng = v == null ? null : v.getLng();
+                    return new VoluntarioNotificado(av.getVoluntarioId(), nombre, lat, lng, av.getDistanciaKm(), av.getEstado().name());
                 })
                 .toList();
 
@@ -126,20 +127,22 @@ public class AlertaService {
             bitacoraRepo.save(new Bitacora(alerta.getId(), "voluntario_notificado",
                     c.voluntario().getNombre() + " (" + String.format("%.1f", c.distanciaKm()) + " km)"));
 
-            ws.convertAndSend("/topic/voluntarios/" + c.voluntario().getId(), Map.of(
+            Map<String, Object> payloadVoluntario = Map.of(
                     "tipo", "alerta:nueva",
                     "alertaId", alerta.getId(),
                     "mensaje", alerta.getMensaje() == null ? "" : alerta.getMensaje(),
                     "distanciaKm", c.distanciaKm()
-            ));
+            );
+            ws.convertAndSend("/topic/voluntarios/" + c.voluntario().getId(), payloadVoluntario);
         }
 
-        ws.convertAndSend("/topic/alertas", Map.of(
+        Map<String, Object> payloadPanel = Map.of(
                 "tipo", "alerta:nueva",
                 "alertaId", alerta.getId(),
                 "estado", alerta.getEstado().name(),
                 "voluntariosNotificados", candidatos.size()
-        ));
+        );
+        ws.convertAndSend("/topic/alertas", payloadPanel);
     }
 
     // --------------------------------------------------------------
@@ -161,11 +164,12 @@ public class AlertaService {
 
         bitacoraRepo.save(new Bitacora(alertaId, "voluntario_" + nuevoEstado.name(), "Voluntario " + req.voluntarioId()));
 
-        ws.convertAndSend("/topic/alertas", Map.of(
+        Map<String, Object> payloadConfirmacion = Map.of(
                 "tipo", "voluntario:" + nuevoEstado.name(),
                 "alertaId", alertaId,
                 "voluntarioId", req.voluntarioId()
-        ));
+        );
+        ws.convertAndSend("/topic/alertas", payloadConfirmacion);
     }
 
     // --------------------------------------------------------------
@@ -181,11 +185,12 @@ public class AlertaService {
 
         bitacoraRepo.save(new Bitacora(alertaId, "estado_cambiado", "Nuevo estado: " + nuevoEstado.name()));
 
-        ws.convertAndSend("/topic/alertas", Map.of(
+        Map<String, Object> payloadEstado = Map.of(
                 "tipo", "alerta:estado",
                 "alertaId", alertaId,
                 "estado", nuevoEstado.name()
-        ));
+        );
+        ws.convertAndSend("/topic/alertas", payloadEstado);
     }
 
     @Transactional

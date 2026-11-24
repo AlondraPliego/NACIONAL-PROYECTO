@@ -9,4 +9,6 @@ import java.util.List;
 public interface VoluntarioRepo extends JpaRepository<Voluntario, Long> {
 
     List<Voluntario> findByDisponibleTrueAndEstatusAprobacion(String estatusAprobacion);
+
+    List<Voluntario> findAllByOrderByNombreAsc();
 }
