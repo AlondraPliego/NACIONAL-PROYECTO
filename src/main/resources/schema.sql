@@ -1,0 +1,113 @@
+-- =====================================================================
+-- Esquema MySQL para el sistema de emergencias (SOS Puebla)
+-- 7 tablas: usuarios, roles, usuario_roles, voluntarios, alertas,
+--           alerta_voluntario, bitacora
+-- ddl-auto: none -> este script se ejecuta solo si spring.sql.init
+-- esta habilitado (ver application.yml)
+-- =====================================================================
+
+DROP TABLE IF EXISTS bitacora;
+DROP TABLE IF EXISTS alerta_voluntario;
+DROP TABLE IF EXISTS alertas;
+DROP TABLE IF EXISTS usuario_roles;
+DROP TABLE IF EXISTS voluntarios;
+DROP TABLE IF EXISTS usuarios;
+DROP TABLE IF EXISTS roles;
+
+-- ---------------------------------------------------------------------
+-- Autenticacion (la define/ajusta Persona A; se deja lista para JWT)
+-- ---------------------------------------------------------------------
+CREATE TABLE roles (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nombre          VARCHAR(40)  NOT NULL UNIQUE          -- OPERADOR, VOLUNTARIO
+) ENGINE=InnoDB;
+
+CREATE TABLE usuarios (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username        VARCHAR(100) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NOT NULL,
+    nombre          VARCHAR(150) NOT NULL,
+    voluntario_id   BIGINT NULL,                          -- FK logica a voluntarios.id si aplica
+    activo          BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE usuario_roles (
+    usuario_id      BIGINT NOT NULL,
+    rol_id          BIGINT NOT NULL,
+    PRIMARY KEY (usuario_id, rol_id),
+    CONSTRAINT fk_ur_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ur_rol FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Voluntarios (solo lectura desde el modulo de alertas)
+-- ---------------------------------------------------------------------
+CREATE TABLE voluntarios (
+    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nombre               VARCHAR(150) NOT NULL,
+    municipio            VARCHAR(120) NOT NULL,
+    lat                  DOUBLE NOT NULL,
+    lng                  DOUBLE NOT NULL,
+    categorias           VARCHAR(500) NOT NULL,           -- CSV: primeros_auxilios,busqueda_rescate,...
+    disponible           BOOLEAN NOT NULL DEFAULT TRUE,
+    estatus_aprobacion   VARCHAR(20) NOT NULL DEFAULT 'pendiente', -- pendiente | aprobado | rechazado
+    creado_en            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Alertas
+-- ---------------------------------------------------------------------
+CREATE TABLE alertas (
+    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tipo                 VARCHAR(30)  NOT NULL,           -- sismo | incendio | inundacion | huracan
+    severidad            VARCHAR(20)  NOT NULL,           -- preventiva | moderada | alta | critica
+    estado               VARCHAR(20)  NOT NULL DEFAULT 'pendiente', -- pendiente | activa | en_atencion | cerrada
+    municipio            VARCHAR(120) NOT NULL,
+    lat                  DOUBLE NOT NULL,
+    lng                  DOUBLE NOT NULL,
+    radio_km             DOUBLE NOT NULL,
+    mensaje              VARCHAR(500),
+    categorias_requeridas VARCHAR(500),                   -- CSV opcional
+    fuente               VARCHAR(30)  NOT NULL DEFAULT 'manual', -- manual | simulador | nasa_eonet
+    fuente_externa_id    VARCHAR(100) NULL,                -- id en EONET, evita duplicados
+    creada_en            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizada_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_alertas_fuente_externa UNIQUE (fuente_externa_id)
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_alertas_estado ON alertas(estado);
+CREATE INDEX idx_alertas_fuente ON alertas(fuente);
+
+-- ---------------------------------------------------------------------
+-- Relacion alerta <-> voluntario notificado
+-- ---------------------------------------------------------------------
+CREATE TABLE alerta_voluntario (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    alerta_id       BIGINT NOT NULL,
+    voluntario_id   BIGINT NOT NULL,
+    distancia_km    DOUBLE NOT NULL,
+    estado          VARCHAR(20) NOT NULL DEFAULT 'notificado', -- notificado | confirmo | declino
+    notificado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    respondido_en   DATETIME NULL,
+    CONSTRAINT fk_av_alerta FOREIGN KEY (alerta_id) REFERENCES alertas(id) ON DELETE CASCADE,
+    CONSTRAINT fk_av_voluntario FOREIGN KEY (voluntario_id) REFERENCES voluntarios(id) ON DELETE CASCADE,
+    CONSTRAINT uq_av_alerta_voluntario UNIQUE (alerta_id, voluntario_id)
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_av_alerta ON alerta_voluntario(alerta_id);
+CREATE INDEX idx_av_voluntario ON alerta_voluntario(voluntario_id);
+
+-- ---------------------------------------------------------------------
+-- Bitacora (linea de tiempo de cada alerta)
+-- ---------------------------------------------------------------------
+CREATE TABLE bitacora (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    alerta_id       BIGINT NOT NULL,
+    evento          VARCHAR(60)  NOT NULL,     -- creada | autorizada | voluntario_notificado | voluntario_confirmo | estado_cambiado | ...
+    detalle         VARCHAR(500),
+    creado_en       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bit_alerta FOREIGN KEY (alerta_id) REFERENCES alertas(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_bitacora_alerta ON bitacora(alerta_id);
