@@ -111,3 +111,43 @@ CREATE TABLE bitacora (
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_bitacora_alerta ON bitacora(alerta_id);
+
+-- =====================================================================
+-- Ajustes Backend A (voluntarios, acopio, roles)
+-- =====================================================================
+INSERT IGNORE INTO roles (nombre) VALUES ('ADMIN'),('OPERADOR'),('VOLUNTARIO'),('CIUDADANO');
+
+ALTER TABLE voluntarios
+  ADD COLUMN apellidos VARCHAR(150) NULL,
+  ADD COLUMN fecha_nacimiento DATE NULL,
+  ADD COLUMN telefono VARCHAR(30) NULL,
+  ADD COLUMN correo VARCHAR(150) NULL UNIQUE,
+  ADD COLUMN extranjero BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN curp VARCHAR(18) NULL UNIQUE,
+  ADD COLUMN tipo_documento VARCHAR(50) NULL,
+  ADD COLUMN numero_documento VARCHAR(50) NULL,
+  ADD COLUMN pais_origen VARCHAR(80) NULL,
+  ADD COLUMN colonia VARCHAR(120) NULL,
+  ADD COLUMN ubicacion_segundo_plano BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN experiencia VARCHAR(500) NULL,
+  ADD COLUMN disponibilidad VARCHAR(30) NOT NULL DEFAULT 'siempre',
+  ADD COLUMN tiene_vehiculo BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN ultima_participacion DATETIME NULL;
+
+CREATE TABLE IF NOT EXISTS centros_acopio (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(150) NOT NULL,
+  direccion VARCHAR(250), municipio VARCHAR(120),
+  lat DOUBLE, lng DOUBLE,
+  horario VARCHAR(100), telefono VARCHAR(30), responsable VARCHAR(150),
+  abierto BOOLEAN NOT NULL DEFAULT TRUE,
+  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS necesidades_acopio (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  centro_id BIGINT NOT NULL,
+  item VARCHAR(150) NOT NULL,
+  prioridad VARCHAR(20) NOT NULL DEFAULT 'normal',
+  CONSTRAINT fk_nec_centro FOREIGN KEY (centro_id) REFERENCES centros_acopio(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

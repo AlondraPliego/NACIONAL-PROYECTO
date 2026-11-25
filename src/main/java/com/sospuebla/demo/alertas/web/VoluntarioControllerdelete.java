@@ -1,4 +1,4 @@
-package com.sospuebla.demo.alertas.web;
+/*package com.sospuebla.demo.alertas.web;
 
 import com.sospuebla.demo.alertas.dto.VoluntarioResumen;
 import com.sospuebla.demo.alertas.model.Voluntario;
@@ -15,9 +15,10 @@ import java.util.List;
  * pintar a los voluntarios. El alta/edicion real de voluntarios la expone
  * Persona A en su propio modulo; esto es nada mas para consulta.
  */
+/* 
 @RestController
 @RequestMapping("/voluntarios")
-public class VoluntarioController {
+public class VoluntarioControllerdelete {
 
     private final VoluntarioRepo voluntarioRepo;
 
@@ -36,4 +37,4 @@ public class VoluntarioController {
                 ))
                 .toList();
     }
-}
+}*/

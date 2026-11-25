@@ -133,7 +133,7 @@ public class AlertaService {
                     "mensaje", alerta.getMensaje() == null ? "" : alerta.getMensaje(),
                     "distanciaKm", c.distanciaKm()
             );
-            ws.convertAndSend("/topic/voluntarios/" + c.voluntario().getId(), payloadVoluntario);
+            ws.convertAndSend("/topic/voluntarios/" + c.voluntario().getId(), (Object) payloadVoluntario);
         }
 
         Map<String, Object> payloadPanel = Map.of(
@@ -142,7 +142,7 @@ public class AlertaService {
                 "estado", alerta.getEstado().name(),
                 "voluntariosNotificados", candidatos.size()
         );
-        ws.convertAndSend("/topic/alertas", payloadPanel);
+        ws.convertAndSend("/topic/alertas", (Object) payloadPanel);
     }
 
     // --------------------------------------------------------------
@@ -169,7 +169,7 @@ public class AlertaService {
                 "alertaId", alertaId,
                 "voluntarioId", req.voluntarioId()
         );
-        ws.convertAndSend("/topic/alertas", payloadConfirmacion);
+        ws.convertAndSend("/topic/alertas", (Object)payloadConfirmacion);
     }
 
     // --------------------------------------------------------------
@@ -190,7 +190,7 @@ public class AlertaService {
                 "alertaId", alertaId,
                 "estado", nuevoEstado.name()
         );
-        ws.convertAndSend("/topic/alertas", payloadEstado);
+        ws.convertAndSend("/topic/alertas", (Object)payloadEstado);
     }
 
     @Transactional

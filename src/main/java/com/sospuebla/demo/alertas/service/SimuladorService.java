@@ -26,7 +26,7 @@ public class SimuladorService {
     @Async
     public void simularSismo(String municipio, double lat, double lng, double radioKm, int segundos) {
         for (int i = segundos; i >= 1; i--) {
-            ws.convertAndSend("/topic/sismo/countdown", Map.of("segundos", i));
+            ws.convertAndSend("/topic/sismo/countdown", (Object) Map.of("segundos", i));
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -34,7 +34,7 @@ public class SimuladorService {
                 return;
             }
         }
-        ws.convertAndSend("/topic/sismo/countdown", Map.of("segundos", 0, "estado", "disparado"));
+        ws.convertAndSend("/topic/sismo/countdown", (Object) Map.of("segundos", 0, "estado", "disparado"));
 
         Alerta a = new Alerta();
         a.setTipo(TipoAlerta.sismo);
